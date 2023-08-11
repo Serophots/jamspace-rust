@@ -40,13 +40,13 @@ impl<'a> WhiteboardWindow<'a> {
         };
 
         //Window
-        let mut window = RenderWindow::new(
+        let window = RenderWindow::new(
             (size.x, size.y),
             title,
             Style::CLOSE,
             &context_settings
         );
-        window.set_vertical_sync_enabled(true);
+        // window.set_vertical_sync_enabled(true);
 
         //View
         let view = View::new(Vector2f::new(size.x as f32 / 2.,size.y as f32 / 2.), size.as_other());
