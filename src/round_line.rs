@@ -1,7 +1,7 @@
 use sfml::graphics::{Color, Vertex};
 use sfml::system::Vector2f;
 
-const NUM_OF_ROUNDED_POINTS: i32 = 25;
+const NUM_OF_ROUNDED_POINTS: i32 = 16;
 
 fn do_segments_intersect((a, b): (Vector2f, Vector2f), (c,d): (Vector2f, Vector2f)) -> bool {
     //no co-linearity, thanks stackoverflow
@@ -99,11 +99,9 @@ impl RoundedLineVertex {
         for i in 0..NUM_OF_ROUNDED_POINTS+1 {
             let theta = perpendicular_angle + (step * i as f32);
             let position = get_position_from_theta(theta);
-            let y = -theta.sin() * line_weight as f32; //o  TOP-LEFT NOT TOP-RIGHT (negate Y)
-            let x = theta.cos() * line_weight as f32; //a
 
             rounded_points.push(Vertex::new(
-                terminating_vertex.position + Vector2f::new(x ,y),
+                position,
                 Color::RED,
                 terminating_vertex.tex_coords
             ));
@@ -124,75 +122,6 @@ impl RoundedLineVertex {
             position: terminating_vertex.position,
             a,
             b,
-        }
-    }
-
-    pub fn old_new_terminating(rounded_points: &mut Vec<Vertex>, line_weight: u32, terminating_vertex: Vertex, too_vertex: Vertex, previous_rounded_line_vertex: Option<&RoundedLineVertex>) -> Self {
-        //Creating a semi-circle of points about the terminating_vertex of the line
-        let terminating_vector = terminating_vertex.position - too_vertex.position;
-        let gradient = compute_gradient(terminating_vertex.position, too_vertex.position);
-        #[allow(unused_assignments)] //Assignment to = 0.; is never read
-        let mut direction = 0.;
-        let mut perpendicular_angle = 0.;
-
-        //Figure out semi-circle direction based on line direction
-        if terminating_vector.y == 0. {
-            //Special case for horizontal straight
-            perpendicular_angle = std::f32::consts::FRAC_PI_2;
-            direction = if terminating_vector.x > 0. {-1.} else {1.};
-        } else if terminating_vector.x == 0. {
-            //Special case for vertical straight
-            direction = if terminating_vector.y > 0. {-1.} else {1.};
-        }else{
-            direction = (gradient / gradient.abs()) * (terminating_vector.x / terminating_vector.x.abs());
-            perpendicular_angle = (-1. / gradient).atan();
-        }
-
-        //Load some points to have the last (straight) line segment render
-        // if let Some(previous) = previous_rounded_line_vertex {
-        // }
-
-
-        //Compute semi-circle
-        let step = direction * std::f32::consts::PI / NUM_OF_ROUNDED_POINTS as f32; //NUM_OF_ROUNDED_POINTS increments along the semicircle
-
-        let mut a: Option<Vector2f> = None;
-        let mut b: Option<Vector2f> = None;
-
-        for i in 0..NUM_OF_ROUNDED_POINTS+1 {
-            let theta = perpendicular_angle + (step * i as f32);
-
-            let y = -theta.sin() * line_weight as f32; //o  TOP-LEFT NOT TOP-RIGHT (negate Y)
-            let x = theta.cos() * line_weight as f32; //a
-
-            rounded_points.push(Vertex::new(
-                terminating_vertex.position + Vector2f::new(x ,y),
-                Color::RED,
-                terminating_vertex.tex_coords
-            ));
-            rounded_points.push(Vertex::new(
-                terminating_vertex.position,
-                Color::RED,
-                terminating_vertex.tex_coords
-            ));
-
-            if i == 0 {
-                a = Some(terminating_vertex.position + Vector2f::new(x ,y));
-            }else if i == NUM_OF_ROUNDED_POINTS {
-                b = Some(terminating_vertex.position + Vector2f::new(x ,y));
-            }
-        }
-
-        rounded_points.push(Vertex::new(
-            a.expect(""),
-            Color::RED,
-            terminating_vertex.tex_coords,
-        ));
-
-        Self {
-            position: terminating_vertex.position,
-            a: a.expect(""),
-            b: b.expect(""),
         }
     }
     pub fn new_connecting(rounded_points: &mut Vec<Vertex>, line_weight: u32, connecting_vertex: Vertex, from_vertex: Vertex, too_vertex: Vertex, previous_rounded_line_vertex: &RoundedLineVertex) -> Option<Self> {

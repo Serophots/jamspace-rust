@@ -55,11 +55,11 @@ fn main() {
 
 
     //Testing line
-    let test_line = RoundedLine::new(vec![
-        Vertex::new(Vector2f::new(50., 50.), Color::GREEN, Vector2f::default()),
-        Vertex::new(Vector2f::new(74., 51.), Color::GREEN, Vector2f::default()),
-        Vertex::new(Vector2f::new(100., 51.), Color::GREEN, Vector2f::default()),
-    ], 10).unwrap();
+    // let test_line = RoundedLine::new(vec![
+    //     Vertex::new(Vector2f::new(50., 50.), Color::GREEN, Vector2f::default()),
+    //     Vertex::new(Vector2f::new(74., 51.), Color::GREEN, Vector2f::default()),
+    //     Vertex::new(Vector2f::new(100., 51.), Color::GREEN, Vector2f::default()),
+    // ], 10).unwrap();
 
     'main: loop{
         //Event loop
@@ -92,7 +92,6 @@ fn main() {
                     if drawing && drawing_timer.elapsed_time() > Time::seconds(0.01) {
                         drawing_timer.restart();
                         drawing_points.push(Vertex::new(mouse_coords, Color::RED, Vector2f::default()));
-
                     }
                 }
                 _ => {}
@@ -100,7 +99,7 @@ fn main() {
         }
 
         //Window render
-        window.clear(Color::rgb(70,70,70));
+        window.clear(Color::rgb(230,230,230));
 
         //Unfixed drawing
         window.set_fixed(false);
@@ -122,14 +121,12 @@ fn main() {
             );
         }
 
-        window.window.draw_primitives(
-            &*test_line.rounded_points,
-            // PrimitiveType::TRIANGLE_STRIP,
-            PrimitiveType::LINE_STRIP,
-            &RenderStates::default()
-        );
-
-
+        // window.window.draw_primitives(
+        //     &*test_line.rounded_points,
+        //     PrimitiveType::TRIANGLE_STRIP,
+        //     // PrimitiveType::LINE_STRIP,
+        //     &RenderStates::default()
+        // );
 
         //Fixed drawing
         window.set_fixed(true);
