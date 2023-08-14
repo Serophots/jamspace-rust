@@ -5,10 +5,8 @@ use crate::tools::DrawingTool;
 const CIRCLE_POINTS: usize = 32;
 
 pub struct SinglePoint {
-    point: Vector2f,
     rendered_points: Vec<Vector2f>,
     rendered_vertexes: Vec<Vertex>,
-    point_weight: u32, //Point radius
 }
 
 impl DrawingTool for SinglePoint {
@@ -28,9 +26,7 @@ impl DrawingTool for SinglePoint {
 
         let mut s = Self {
             rendered_vertexes: Vec::with_capacity(rendered_points.len()),
-            point,
             rendered_points,
-            point_weight,
         };
         s.rerender_vertexes(color);
 

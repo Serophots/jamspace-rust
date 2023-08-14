@@ -7,7 +7,6 @@ const SEMICIRCLE_POINTS: usize = 16;
 
 pub struct RoundedLine { //TODO: Put some of these on the heap
     defining_points: Vec<RoundedLineVertex>,
-    rendered_points: Vec<Vector2f>,
     rendered_vertexes: Vec<Vertex>,
     line_weight: u32, //Line thickness
 }
@@ -18,7 +17,6 @@ pub struct RoundedLine { //TODO: Put some of these on the heap
 impl DrawingTool for RoundedLine {
     fn new(defining_points: Vec<Vector2f>, color: Color) -> Self {
         let mut processed_defining_points: Vec<RoundedLineVertex> = Vec::with_capacity(defining_points.len());
-        let mut rendered_points: Vec<Vector2f> = Vec::with_capacity(((defining_points.len() * SEMICIRCLE_POINTS) * 2) as usize); //Estimated capacity
         let defining_points_len = defining_points.len();
         let line_weight = 10;
 
@@ -29,20 +27,20 @@ impl DrawingTool for RoundedLine {
                 let terminating_point = defining_points[i];
                 let too_point = defining_points[i + 1];
 
-                processed_defining_points.push(RoundedLineVertex::new_terminating(&mut rendered_points, line_weight, terminating_point, too_point, None));
+                processed_defining_points.push(RoundedLineVertex::new_terminating(line_weight, terminating_point, too_point, None));
             } else if i == defining_points_len-1 {
                 //Terminating vertex (end) + Connecting vertex so that things line up
                 let terminating_point = defining_points[i];
                 let too_point = defining_points[i - 1];
 
-                processed_defining_points.push(RoundedLineVertex::new_terminating(&mut rendered_points, line_weight, terminating_point, too_point, processed_defining_points.last()));
+                processed_defining_points.push(RoundedLineVertex::new_terminating(line_weight, terminating_point, too_point, processed_defining_points.last()));
             } else {
                 //Connecting vertex
                 let from_point = defining_points[i-1];
                 let connecting_point = defining_points[i];
                 let too_point = defining_points[i+1];
 
-                match RoundedLineVertex::new_connecting(&mut rendered_points, line_weight, connecting_point, from_point, too_point, processed_defining_points.last().unwrap()) {
+                match RoundedLineVertex::new_connecting(line_weight, connecting_point, from_point, too_point, processed_defining_points.last().unwrap()) {
                     Some(rounded_line_vertex) => {
                         processed_defining_points.push(rounded_line_vertex);
                     }
@@ -53,8 +51,7 @@ impl DrawingTool for RoundedLine {
 
         let mut s = Self {
             defining_points: processed_defining_points,
-            rendered_vertexes: Vec::with_capacity(rendered_points.len()),
-            rendered_points,
+            rendered_vertexes: Vec::new(), //with capacity
             line_weight,
         };
         s.rerender_vertexes(color);
@@ -64,15 +61,44 @@ impl DrawingTool for RoundedLine {
 
     fn rerender_vertexes(&mut self, color: Color) {
         let tex_coords = Vector2f::default();
-
         self.rendered_vertexes.clear();
-        for rendered_point in &self.rendered_points {
+
+        let plot_semicircle = |vertex: &RoundedLineVertex, rendered_vertexes: &mut Vec<Vertex>| {
+            let step = vertex.direction * std::f32::consts::PI / SEMICIRCLE_POINTS as f32;
+
+            for i in 0..SEMICIRCLE_POINTS + 1 {
+                let theta = vertex.perpendicular_angle + (step * i as f32);
+
+                rendered_vertexes.push(Vertex::new(
+                    vertex.point + Vector2f::new(theta.cos() * self.line_weight as f32, -theta.sin() * self.line_weight as f32), //-y because games use top-left coordinate system
+                    color,
+                    tex_coords
+                ));
+                rendered_vertexes.push(Vertex::new(
+                    vertex.point,
+                    color,
+                    tex_coords
+                ));
+            }
+        };
+
+        plot_semicircle(&self.defining_points.get(0).unwrap(), &mut self.rendered_vertexes);
+
+        //Connecting points
+        for rounded_line_vertex in &self.defining_points {
             self.rendered_vertexes.push(Vertex::new(
-                *rendered_point,
+                rounded_line_vertex.a,
                 color,
                 tex_coords
-            ))
+            ));
+            self.rendered_vertexes.push(Vertex::new(
+                rounded_line_vertex.b,
+                color,
+                tex_coords
+            ));
         }
+
+        plot_semicircle(&self.defining_points.get(self.defining_points.len()-1).unwrap(), &mut self.rendered_vertexes);
     }
 
     fn get_rendered_vertexes(&self) -> &Vec<Vertex> {
@@ -84,14 +110,16 @@ pub struct RoundedLineVertex {
     point: Vector2f,
     a: Vector2f, //a and b are computed positions along the bisectors of a line intersection
     b: Vector2f, //OR the top and bottom defining points of a terminating semi-circle
+    perpendicular_angle: f32,
+    direction: f32,
 }
 
 impl RoundedLineVertex {
-    pub fn new_terminating(rendered_points: &mut Vec<Vector2f>, line_weight: u32, terminating_point: Vector2f, too_point: Vector2f, previous_rounded_point: Option<&RoundedLineVertex>) -> Self {
+    pub fn new_terminating(line_weight: u32, terminating_point: Vector2f, too_point: Vector2f, previous_rounded_point: Option<&RoundedLineVertex>) -> Self {
         //Creating a semi-circle of points about the terminating_vertex of the line
         let terminating_vector = terminating_point - too_point;
         let gradient = compute_gradient(terminating_point, too_point);
-        let mut direction: f32;
+        let direction: f32;
         let mut perpendicular_angle = 0.;
 
         //Direction = 1 for clockwise, -1 for anticlockwise:
@@ -108,49 +136,30 @@ impl RoundedLineVertex {
         }
 
         let get_position_from_theta = |theta: f32| terminating_point + Vector2f::new(theta.cos() * line_weight as f32, -theta.sin() * line_weight as f32); //-y because games use top-left coordinate system
-        let step = direction * std::f32::consts::PI / SEMICIRCLE_POINTS as f32;
 
+        //Define a,b
         let mut a = get_position_from_theta(perpendicular_angle);
         let mut b = get_position_from_theta(perpendicular_angle + std::f32::consts::PI);
 
-        //If there was any previous line vertexes, deploy extra code to ensure a graphically fine link:
+        //Swap a,b if they intersect with a previous a,b
         if let Some(previous) = previous_rounded_point {
-            //Swap A & B if they intersect with the previous vertex's a & b
             if do_segments_intersect((previous.a, a), (previous.b, b)) {
                 let ac = a;
                 a = b;
                 b = ac;
             }
-
-            //Write some points to catch the line up to its end
-            // Last center, new A, new B, last B, last A,   current A to begin next cycle
-            rendered_points.push(previous.point); //TODO: :thinking: implement higher efficiency rendering algorithm -> potentially collect the rendered points after processing not during
-            rendered_points.push(a);
-            rendered_points.push(b);
-            rendered_points.push(previous.b);
-            rendered_points.push(previous.a);
-            rendered_points.push(a);
         }
-
-        //Compute points about semicircle
-        for i in 0..SEMICIRCLE_POINTS +1 {
-            let theta = perpendicular_angle + (step * i as f32);
-            let position = get_position_from_theta(theta);
-
-            rendered_points.push(position);
-            rendered_points.push(terminating_point);
-        }
-
-        rendered_points.push(a);
 
         Self {
             point: terminating_point,
             a,
             b,
+            perpendicular_angle,
+            direction
         }
     }
 
-    pub fn new_connecting(rendered_points: &mut Vec<Vector2f>, line_weight: u32, connecting_point: Vector2f, from_point: Vector2f, too_point: Vector2f, previous_rounded_point: &RoundedLineVertex) -> Option<Self> {
+    pub fn new_connecting(line_weight: u32, connecting_point: Vector2f, from_point: Vector2f, too_point: Vector2f, previous_rounded_point: &RoundedLineVertex) -> Option<Self> {
         let outgoing_from_vector = normalize_vector(from_point - connecting_point);
         let outgoing_to_vector = normalize_vector(too_point - connecting_point);
         let bisecting_vector_acute = normalize_vector(outgoing_from_vector + outgoing_to_vector) * line_weight as f32;
@@ -174,19 +183,12 @@ impl RoundedLineVertex {
             b = connecting_point + bisecting_vector_acute;
         }
 
-        // Last center, new A, new B, last B, last A,   current A to begin next cycle
-        rendered_points.push(previous_rounded_point.point);
-        rendered_points.push(a);
-        rendered_points.push(b);
-        rendered_points.push(previous_rounded_point.b);
-        rendered_points.push(previous_rounded_point.a);
-        rendered_points.push(a);
-        //TODO: Merge this into an .append, or some other more efficient form
-
         Some(Self {
             point: connecting_point,
             a,
             b,
+            perpendicular_angle: 0.,
+            direction: 0.,
         })
     }
 }
