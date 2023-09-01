@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 sfml = "0.21.0"
+scrollable_sfml_window={git = "https://github.com/Serophots/scrollable_sfml_window.git"}
+sfml_ui_lib={git = "https://github.com/Serophots/sfml_ui_lib.git"}

@@ -10,15 +10,15 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "bitflags"
-version = "2.3.3"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "630be753d4e58660abd17930c71b647fe46c27ea6b63cc59e1e3851406972e42"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
 name = "cc"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "305fe645edc1442a0fa8b6726ba61d422798d37a52e12eaecf4b022ebbb88f01"
+checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
 dependencies = [
  "libc",
 ]
@@ -27,7 +27,9 @@ dependencies = [
 name = "jamspace"
 version = "0.1.0"
 dependencies = [
+ "scrollable_sfml_window",
  "sfml",
+ "sfml_ui_lib",
 ]
 
 [[package]]
@@ -61,6 +63,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
+name = "scrollable_sfml_window"
+version = "0.1.0"
+source = "git+https://github.com/Serophots/scrollable_sfml_window.git#3b1f3ed777c6273e8c6737cc3c5b27bc7d4b5bd7"
+dependencies = [
+ "sfml",
+]
+
+[[package]]
 name = "sfml"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -72,6 +82,14 @@ dependencies = [
  "num-traits",
  "once_cell",
  "widestring",
+]
+
+[[package]]
+name = "sfml_ui_lib"
+version = "0.1.0"
+source = "git+https://github.com/Serophots/sfml_ui_lib.git#39a2795201fe07a9ad96bd0666306f1df5f8a1b8"
+dependencies = [
+ "sfml",
 ]
 
 [[package]]

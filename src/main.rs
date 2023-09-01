@@ -1,19 +1,17 @@
-mod whiteboard_window;
 mod tools;
-mod ui_lib;
 
+use scrollable_sfml_window::ScrollableWindow;
 use sfml::graphics::{Color, Font, PrimitiveType, RenderStates, RenderTarget, Text, Transformable};
 use sfml::system::{Clock, Time, Vector2f, Vector2i, Vector2u};
 use sfml::window;
 use sfml::window::{Event, Key};
-use whiteboard_window::WhiteboardWindow;
+use sfml_ui_lib::udim::UDim2;
+use sfml_ui_lib::ui_rectangle::UIRectangle;
+use sfml_ui_lib::UIScreen;
 use crate::DrawTool::PEN;
 use crate::tools::DrawingTool;
 use crate::tools::rounded_line::RoundedLine;
 use crate::tools::single_point::SinglePoint;
-use crate::ui_lib::udim::{UDim2, UIPositionable};
-use crate::ui_lib::ui_rectangle::UIRectangle;
-use crate::ui_lib::UIScreen;
 
 macro_rules! resource {
     ($path:literal) => {
@@ -50,7 +48,7 @@ fn construct_drawing(defining_points: Vec<Vector2f>, tool: DrawTool, color: Colo
 
 fn main() {
     let window_size = Vector2u::new(800,600);
-    let mut window = WhiteboardWindow::new(window_size, "Jamspace");
+    let mut window = ScrollableWindow::new(window_size, "Jamspace");
 
     //State
     let mut primitive_type = PrimitiveType::TRIANGLE_STRIP;
@@ -106,10 +104,11 @@ fn main() {
     );
 
 
-    // let draw_tool_button = Button::new(
-    //     UDim2::position_from_parent((0., 5.), (0., 5.), controls_frame),
-    //     UDim2::size_from_parent((1./4., -10.), (1., -10.), controls_frame)
-    // );
+    let draw_tool_button = UIRectangle::new(
+        UDim2::position_from_parent((0., 5.), (0., 5.), &controls_frame),
+        UDim2::size_from_parent((1./4., -10.), (1., -10.), &controls_frame),
+        Color::WHITE
+    );
 
 
     // let mut ui = UIBuilder::new();
@@ -146,9 +145,6 @@ fn main() {
     //     },
     //     Color::WHITE
     // )));
-
-    //TODO: Develop a parental hierarchy system to the UI
-    //When checking for hover, we can eliminate the children of a parent who isn't hovered
 
 
     'main: loop{
@@ -233,7 +229,9 @@ fn main() {
         window.draw(&fps_message);
         window.draw(&mouse_message);
 
+        //UI
         window.draw(&controls_frame);
+        window.draw(&draw_tool_button);
 
         //Display
         window.display();
