@@ -1,7 +1,7 @@
 use sfml::graphics::{Color, Vertex};
 use sfml::system::Vector2f;
 use crate::tools::DrawingTool;
-use crate::tools::utils::{compute_gradient, do_segments_intersect, normalize_vector};
+use crate::tools::utils::{compute_gradient, does_segment_intersect_segment, normalize_vector};
 
 const SEMICIRCLE_POINTS: usize = 16;
 
@@ -13,6 +13,7 @@ pub struct RoundedLine { //TODO: Put some of these on the heap
 
 //TODO: If newA-newB intersects oldA-oldB then do a 360 degree
 // or more refined, if either newA,newB fall behind oldA,oldB
+// Check if newA-newB intersects the infinite line formed by oldA-oldB
 
 impl DrawingTool for RoundedLine {
     fn new(defining_points: Vec<Vector2f>, color: Color) -> Self {
@@ -116,7 +117,7 @@ pub struct RoundedLineVertex {
 
 impl RoundedLineVertex {
     pub fn new_terminating(line_weight: u32, terminating_point: Vector2f, too_point: Vector2f, previous_rounded_point: Option<&RoundedLineVertex>) -> Self {
-        //Creating a semi-circle of points about the terminating_vertex of the line
+        //Create the outline of the semicircle: Points a,b from which it arcs, and the direction. The actual computation occurs at render-time
         let terminating_vector = terminating_point - too_point;
         let gradient = compute_gradient(terminating_point, too_point);
         let direction: f32;
@@ -143,7 +144,7 @@ impl RoundedLineVertex {
 
         //Swap a,b if they intersect with a previous a,b
         if let Some(previous) = previous_rounded_point {
-            if do_segments_intersect((previous.a, a), (previous.b, b)) {
+            if does_segment_intersect_segment((previous.a, a), (previous.b, b)) {
                 let ac = a;
                 a = b;
                 b = ac;
@@ -162,25 +163,33 @@ impl RoundedLineVertex {
     pub fn new_connecting(line_weight: u32, connecting_point: Vector2f, from_point: Vector2f, too_point: Vector2f, previous_rounded_point: &RoundedLineVertex) -> Option<Self> {
         let outgoing_from_vector = normalize_vector(from_point - connecting_point);
         let outgoing_to_vector = normalize_vector(too_point - connecting_point);
-        let bisecting_vector_acute = normalize_vector(outgoing_from_vector + outgoing_to_vector) * line_weight as f32;
-        let bisecting_vector_obtuse = -bisecting_vector_acute;
-
-        //TODO: Better method to check straight line. Currently requires two extra normalizations:
-        if (outgoing_from_vector + outgoing_to_vector).length_sq() == 0. {
-            return None; //Straight line - doesn't need marking out
-        }
 
         if outgoing_from_vector.cross(outgoing_to_vector) == 0. {
             //Forms a straight line or otherwise has no bisectors
             return None;
         }
 
+        let bisecting_acute_unit_vector = normalize_vector(outgoing_from_vector + outgoing_to_vector);
+        let bisecting_obtuse_unit_vector = -bisecting_acute_unit_vector;
+
+        //For the acute vector, distance is calculated from the nearest point along the two lines, rather than from the angle which they bisect - compute that distance:
+        let bisecting_angle = outgoing_from_vector.dot(outgoing_to_vector).acos();
+        let mut bisecting_acute_dist = line_weight as f32 / (bisecting_angle / 2.).sin();
+
+        if bisecting_acute_dist > line_weight as f32 * 2. {
+            bisecting_acute_dist = line_weight as f32 * 2.;
+        }
+
+        let bisecting_obtuse_vector = bisecting_obtuse_unit_vector * line_weight as f32;
+        let bisecting_acute_vector = bisecting_acute_unit_vector * bisecting_acute_dist;
+
+
         //Set a,b such that they pair with last a,b in that they're on the same side of the line
-        let mut a = connecting_point + bisecting_vector_acute;
-        let mut b = connecting_point + bisecting_vector_obtuse;
-        if do_segments_intersect((previous_rounded_point.a, a), (previous_rounded_point.point, connecting_point)) {
-            a = connecting_point + bisecting_vector_obtuse;
-            b = connecting_point + bisecting_vector_acute;
+        let mut a = connecting_point + bisecting_acute_vector;
+        let mut b = connecting_point + bisecting_obtuse_vector;
+        if does_segment_intersect_segment((previous_rounded_point.a, a), (previous_rounded_point.point, connecting_point)) {
+            a = connecting_point + bisecting_obtuse_vector;
+            b = connecting_point + bisecting_acute_vector;
         }
 
         Some(Self {

@@ -1,7 +1,7 @@
 mod whiteboard_window;
 mod tools;
 
-use sfml::graphics::{Color, Font, PrimitiveType, RenderStates, RenderTarget, Text, Transformable, Vertex};
+use sfml::graphics::{Color, Font, PrimitiveType, RenderStates, RenderTarget, Text, Transformable};
 use sfml::system::{Clock, Time, Vector2f, Vector2i, Vector2u};
 use sfml::window;
 use sfml::window::{Event, Key};
