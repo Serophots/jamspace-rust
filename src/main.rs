@@ -1,5 +1,6 @@
 mod whiteboard_window;
 mod tools;
+mod ui_lib;
 
 use sfml::graphics::{Color, Font, PrimitiveType, RenderStates, RenderTarget, Text, Transformable};
 use sfml::system::{Clock, Time, Vector2f, Vector2i, Vector2u};
@@ -10,6 +11,9 @@ use crate::DrawTool::PEN;
 use crate::tools::DrawingTool;
 use crate::tools::rounded_line::RoundedLine;
 use crate::tools::single_point::SinglePoint;
+use crate::ui_lib::udim::{UDim2, UIPositionable};
+use crate::ui_lib::ui_rectangle::UIRectangle;
+use crate::ui_lib::UIScreen;
 
 macro_rules! resource {
     ($path:literal) => {
@@ -55,7 +59,7 @@ fn main() {
 
     //Drawing
     let mut drawing = false;
-    let mut drawing_tool = PEN;
+    let drawing_tool = PEN;
     let default_render_states = RenderStates::default();
     let mut defining_points: Vec<Vector2f> = Vec::new();
     let mut drawings: Vec<Box<dyn DrawingTool>> = Vec::new();
@@ -92,6 +96,22 @@ fn main() {
     mouse_message.set_outline_thickness(3.);
 
     //Create UI
+
+    let screen_frame = UIScreen::new((window_size.x as f32, window_size.y as f32));
+
+    let controls_frame = UIRectangle::new(
+        UDim2::position_from_parent((0.25, 0.), (0.8, -50.), &screen_frame),
+        UDim2::size_from_parent((0.5, 0.), (0.2, 0.), &screen_frame),
+        Color::BLACK
+    );
+
+
+    // let draw_tool_button = Button::new(
+    //     UDim2::position_from_parent((0., 5.), (0., 5.), controls_frame),
+    //     UDim2::size_from_parent((1./4., -10.), (1., -10.), controls_frame)
+    // );
+
+
     // let mut ui = UIBuilder::new();
     //
     // let controls_frame = ui.add_element(Box::new(Frame::new(
@@ -213,7 +233,7 @@ fn main() {
         window.draw(&fps_message);
         window.draw(&mouse_message);
 
-        // window.draw(&ui);
+        window.draw(&controls_frame);
 
         //Display
         window.display();
